@@ -1,0 +1,14 @@
+#!/bin/bash
+#BSUB -J sicstudent
+#BSUB -e %J.err
+#BSUB -o %J.out
+#BSUB -q ibmsic
+#BSUB -n 2
+#BSUB -R "span[ptile=24]"
+##BSUB -R "span[host=1]"
+
+# source /gpfs/compiler/parallel_studio_xe_2017.5.061/bin/psxevars.sh >/dev/null 2>&1
+ 
+mpirun -bootstrap lsf /gpfs/software/vasp/vasp.5.3-20181107 > result.log
+
+
