@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${LOGDIR:=$PWD/acceptance_logs}"
+
+CUDA_IMAGE_TAG="${CUDA_IMAGE_TAG:-12.8.1-devel-ubuntu24.04}"
+PYTORCH_CUDA_INDEX="${PYTORCH_CUDA_INDEX:-cu128}"
+
+mkdir -p "$LOGDIR/container_build"
+
+cat > "$LOGDIR/container_build/Dockerfile" <<EOF
+FROM nvidia/cuda:${CUDA_IMAGE_TAG}
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \\
+    wget curl ca-certificates git build-essential pciutils && \\
+    rm -rf /var/lib/apt/lists/*
+
+RUN wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \\
+    bash /tmp/miniconda.sh -b -p /opt/conda && \\
+    rm /tmp/miniconda.sh
+
+ENV PATH=/opt/conda/bin:\$PATH
+
+RUN conda create -y -n accept python=3.12 && \\
+    conda clean -afy
+
+SHELL ["/bin/bash", "-lc"]
+
+RUN conda activate accept && \\
+    python -m pip install --upgrade pip && \\
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/${PYTORCH_CUDA_INDEX} && \\
+    pip install vllm
+
+CMD ["/bin/bash"]
+EOF
+
+echo "Dockerfile 已生成：$LOGDIR/container_build/Dockerfile"
+echo "CUDA_IMAGE_TAG=${CUDA_IMAGE_TAG}"
+echo "PYTORCH_CUDA_INDEX=${PYTORCH_CUDA_INDEX}"
